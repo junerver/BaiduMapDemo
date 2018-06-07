@@ -38,7 +38,7 @@ class SelectAddressByMapActivity : AppCompatActivity() {
     private var mCurrentMode: MyLocationConfiguration.LocationMode? = null
     private var sugAdapter: ArrayAdapter<String>? = null //输入搜索内容显示的提示
     private var mSelectCity: String? = null
-    internal var mSuggestionInfos: MutableList<SuggestionResult.SuggestionInfo> = ArrayList()// 搜索结果列表
+    private var mSuggestionInfos: MutableList<SuggestionResult.SuggestionInfo> = ArrayList()// 搜索结果列表
     private var acStateIsMap = true//当前页面是地图还是搜索
     private var mContext: Context? = null
 
