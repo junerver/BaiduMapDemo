@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">BaiduMapDemo</string>
+    <string name="title_activity_select_address_by_map">SelectAddressByMapActivity</string>
+</resources>
