@@ -29,18 +29,18 @@ import java.util.*
 class SelectAddressByMapActivity : AppCompatActivity() {
 
     private val REQUEST_CODE_CITY = 999
-    private var mLocClient: LocationClient? = null
-    private var geoCoder: GeoCoder? = null
+    private lateinit var mLocClient: LocationClient
+    private lateinit var geoCoder: GeoCoder
     private var isFirstLoc = true
-    private var locationLatLng: LatLng? = null
-    private var mSuggestionSearch: SuggestionSearch? = null
-    private var mBaiduMap: BaiduMap? = null
-    private var mCurrentMode: MyLocationConfiguration.LocationMode? = null
-    private var sugAdapter: ArrayAdapter<String>? = null //输入搜索内容显示的提示
-    private var mSelectCity: String? = null
+    private lateinit var locationLatLng: LatLng
+    private lateinit var mSuggestionSearch: SuggestionSearch
+    private lateinit var mBaiduMap: BaiduMap
+    private lateinit var mCurrentMode: MyLocationConfiguration.LocationMode
+    private lateinit var sugAdapter: ArrayAdapter<String> //输入搜索内容显示的提示
+    private lateinit var mSelectCity: String
     private var mSuggestionInfos: MutableList<SuggestionResult.SuggestionInfo> = ArrayList()// 搜索结果列表
     private var acStateIsMap = true//当前页面是地图还是搜索
-    private var mContext: Context? = null
+    private lateinit var mContext: Context
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,9 +74,9 @@ class SelectAddressByMapActivity : AppCompatActivity() {
         mBaiduMap = mMap.map
         val mapStatus = MapStatus.Builder().zoom(15f).build()
         val mMapStatusUpdate = MapStatusUpdateFactory.newMapStatus(mapStatus)
-        mBaiduMap!!.setMapStatus(mMapStatusUpdate)
+        mBaiduMap.setMapStatus(mMapStatusUpdate)
         // 地图状态改变相关监听
-        mBaiduMap!!.setOnMapStatusChangeListener(object : BaiduMap.OnMapStatusChangeListener {
+        mBaiduMap.setOnMapStatusChangeListener(object : BaiduMap.OnMapStatusChangeListener {
             override fun onMapStatusChangeStart(p0: MapStatus?) {}
 
             override fun onMapStatusChangeStart(p0: MapStatus?, p1: Int) {}
@@ -87,28 +87,28 @@ class SelectAddressByMapActivity : AppCompatActivity() {
                 // 获取地图最后状态改变的中心点
                 val cenpt = p0!!.target
                 //将中心点坐标转化为具体位置信息，当转化成功后调用onGetReverseGeoCodeResult()方法
-                geoCoder!!.reverseGeoCode(ReverseGeoCodeOption().location(cenpt))
+                geoCoder.reverseGeoCode(ReverseGeoCodeOption().location(cenpt))
             }
         })
         // 开启定位图层
-        mBaiduMap!!.isMyLocationEnabled = true
+        mBaiduMap.isMyLocationEnabled = true
         // 定位图层显示方式
         mCurrentMode = MyLocationConfiguration.LocationMode.NORMAL
-        mBaiduMap!!.setMyLocationConfigeration(MyLocationConfiguration(mCurrentMode, true, null))
+        mBaiduMap.setMyLocationConfigeration(MyLocationConfiguration(mCurrentMode, true, null))
         mLocClient = LocationClient(this)
 
         // 创建GeoCoder实例对象
         geoCoder = GeoCoder.newInstance()
-        geoCoder!!.setOnGetGeoCodeResultListener(object : OnGetGeoCoderResultListener {
+        geoCoder.setOnGetGeoCodeResultListener(object : OnGetGeoCoderResultListener {
             override fun onGetGeoCodeResult(p0: GeoCodeResult?) {}
 
             override fun onGetReverseGeoCodeResult(p0: ReverseGeoCodeResult?) {
                 val poiInfos = p0!!.poiList
                 if (poiInfos != null) {
-                    val poiAdapter = PoiAdapter(mContext!!, poiInfos)
+                    val poiAdapter = PoiAdapter(mContext, poiInfos)
                     mLvResult.adapter = poiAdapter
                     mLvResult.onItemClickListener = AdapterView.OnItemClickListener { _, _, position, _ ->
-                        val poiInfo = poiInfos!![position]
+                        val poiInfo = poiInfos[position]
                         val intent = Intent()
                         intent.putExtra("address", poiInfo.name)
                         setResult(RESULT_OK, intent)
@@ -120,25 +120,25 @@ class SelectAddressByMapActivity : AppCompatActivity() {
 
         // 初始化搜索模块，注册搜索事件监听
         mSuggestionSearch = SuggestionSearch.newInstance()
-        mSuggestionSearch!!.setOnGetSuggestionResultListener { suggestionResult ->
+        mSuggestionSearch.setOnGetSuggestionResultListener { suggestionResult ->
             if (suggestionResult == null || suggestionResult.allSuggestions == null) {
                 return@setOnGetSuggestionResultListener
             }
             mSuggestionInfos.clear()
-            sugAdapter!!.clear()
+            sugAdapter.clear()
             val suggestionInfoList = suggestionResult.allSuggestions
             if (suggestionInfoList != null) {
                 for (info in suggestionInfoList) {
                     if (info.pt != null) {
                         mSuggestionInfos.add(info)
-                        sugAdapter!!.add(info.district + info.key)
+                        sugAdapter.add(info.district + info.key)
                     }
                 }
             }
-            sugAdapter!!.notifyDataSetChanged()
+            sugAdapter.notifyDataSetChanged()
         }
         // 注册定位监听
-        mLocClient!!.registerLocationListener { bdLocation ->
+        mLocClient.registerLocationListener { bdLocation ->
             // 如果bdLocation为空或mapView销毁后不再处理新数据接收的位置
             if (bdLocation == null || mBaiduMap == null) {
                 return@registerLocationListener
@@ -149,13 +149,13 @@ class SelectAddressByMapActivity : AppCompatActivity() {
                     .latitude(bdLocation.latitude)// 经度
                     .longitude(bdLocation.longitude)// 纬度
                     .build()// 构建
-            mBaiduMap!!.setMyLocationData(data)// 设置定位数据
+            mBaiduMap.setMyLocationData(data)// 设置定位数据
             // 是否是第一次定位
             if (isFirstLoc) {
                 isFirstLoc = false
                 val ll = LatLng(bdLocation.latitude, bdLocation.longitude)
                 val msu = MapStatusUpdateFactory.newLatLngZoom(ll, 18f)
-                mBaiduMap!!.animateMapStatus(msu)
+                mBaiduMap.animateMapStatus(msu)
                 locationLatLng = LatLng(bdLocation.latitude, bdLocation.longitude)
                 // 获取城市，待会用于POISearch
                 mSelectCity = bdLocation.city
@@ -164,7 +164,7 @@ class SelectAddressByMapActivity : AppCompatActivity() {
                 val reverseGeoCodeOption = ReverseGeoCodeOption()
                 // 设置反地理编码位置坐标
                 reverseGeoCodeOption.location(locationLatLng)
-                geoCoder!!.reverseGeoCode(reverseGeoCodeOption)
+                geoCoder.reverseGeoCode(reverseGeoCodeOption)
             }
         }
         // 定位选项
@@ -176,8 +176,8 @@ class SelectAddressByMapActivity : AppCompatActivity() {
         option.locationMode = LocationClientOption.LocationMode.Hight_Accuracy
         option.isOpenGps = true
         option.setScanSpan(1000)
-        mLocClient!!.locOption = option
-        mLocClient!!.start()
+        mLocClient.locOption = option
+        mLocClient.start()
 
         sugAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line)
         mLvSearch.adapter = sugAdapter
@@ -198,7 +198,7 @@ class SelectAddressByMapActivity : AppCompatActivity() {
                 if (cs.isEmpty()) {
                     return
                 }
-                mSuggestionSearch!!.requestSuggestion(SuggestionSearchOption()
+                mSuggestionSearch.requestSuggestion(SuggestionSearchOption()
                         .citylimit(true)
                         .keyword(cs.toString())
                         .city(mSelectCity))
@@ -218,13 +218,13 @@ class SelectAddressByMapActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        mLocClient!!.stop()
-        mBaiduMap!!.setMyLocationEnabled(false)
+        mLocClient.stop()
+        mBaiduMap.setMyLocationEnabled(false)
         mMap.onDestroy()
         if (geoCoder != null) {
-            geoCoder!!.destroy()
+            geoCoder.destroy()
         }
-        mSuggestionSearch!!.destroy()
+        mSuggestionSearch.destroy()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {
@@ -234,8 +234,8 @@ class SelectAddressByMapActivity : AppCompatActivity() {
             mSelectCity = data.getStringExtra("city")
             mTvSelectedCity.text = mSelectCity
             mSuggestionInfos.clear()
-            sugAdapter!!.clear()
-            sugAdapter!!.notifyDataSetChanged()
+            sugAdapter.clear()
+            sugAdapter.notifyDataSetChanged()
         }
     }
 
@@ -275,14 +275,14 @@ class SelectAddressByMapActivity : AppCompatActivity() {
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
             var convertView = convertView
-            var holder: ViewHolder? = null
+            var holder: ViewHolder
             if (convertView == null) {
                 convertView = LayoutInflater.from(context).inflate(R.layout.locationpois_item, null)
                 linearLayout = convertView!!.findViewById(R.id.locationpois_linearlayout) as LinearLayout
-                holder = ViewHolder(convertView)
-                convertView.tag = holder
+                holder = ViewHolder(convertView!!)
+                convertView!!.tag = holder
             } else {
-                holder = convertView.tag as ViewHolder
+                holder = convertView!!.tag as ViewHolder
             }
             if (position == 0) {
                 holder.iv_gps.setImageDrawable(resources.getDrawable(R.drawable.gps_orange))
@@ -296,21 +296,16 @@ class SelectAddressByMapActivity : AppCompatActivity() {
             val poiInfo = pois[position]
             holder.locationpoi_name.text = poiInfo.name
             holder.locationpoi_address.text = poiInfo.address
-            return convertView
+            return convertView!!
         }
 
 
         internal inner class ViewHolder(view: View) {
-            var iv_gps: ImageView
-            var locationpoi_name: TextView
-            var locationpoi_address: TextView
+            var iv_gps: ImageView = view.findViewById(R.id.iv_gps) as ImageView
+            var locationpoi_name: TextView = view.findViewById(R.id.locationpois_name) as TextView
+            var locationpoi_address: TextView = view.findViewById(R.id.locationpois_address) as TextView
 
 
-            init {
-                locationpoi_name = view.findViewById(R.id.locationpois_name) as TextView
-                locationpoi_address = view.findViewById(R.id.locationpois_address) as TextView
-                iv_gps = view.findViewById(R.id.iv_gps) as ImageView
-            }
         }
     }
 
