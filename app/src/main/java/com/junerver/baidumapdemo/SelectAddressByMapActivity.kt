@@ -25,6 +25,7 @@ import com.baidu.mapapi.search.sug.SuggestionSearch
 import com.baidu.mapapi.search.sug.SuggestionSearchOption
 import kotlinx.android.synthetic.main.activity_select_address_by_map.*
 import java.util.*
+import kotlin.collections.ArrayList
 
 class SelectAddressByMapActivity : AppCompatActivity() {
 
@@ -41,6 +42,8 @@ class SelectAddressByMapActivity : AppCompatActivity() {
     private var mSuggestionInfos: MutableList<SuggestionResult.SuggestionInfo> = ArrayList()// 搜索结果列表
     private var acStateIsMap = true//当前页面是地图还是搜索
     private lateinit var mContext: Context
+    private var mPoiInfoList: MutableList<PoiInfo> = ArrayList() //存放地图中心点附近的POI信息
+    private lateinit var mPoiAdapter: PoiAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -84,10 +87,13 @@ class SelectAddressByMapActivity : AppCompatActivity() {
             override fun onMapStatusChange(p0: MapStatus?) {}
 
             override fun onMapStatusChangeFinish(p0: MapStatus?) {
-                // 获取地图最后状态改变的中心点
-                val cenpt = p0!!.target
-                //将中心点坐标转化为具体位置信息，当转化成功后调用onGetReverseGeoCodeResult()方法
-                geoCoder.reverseGeoCode(ReverseGeoCodeOption().location(cenpt))
+//                // 获取地图最后状态改变的中心点
+//                val cenpt = p0!!.target
+//                //将中心点坐标转化为具体位置信息，当转化成功后调用onGetReverseGeoCodeResult()方法
+//                geoCoder.reverseGeoCode(ReverseGeoCodeOption().location(cenpt))
+                p0?.target?.let {
+                    geoCoder.reverseGeoCode(ReverseGeoCodeOption().location(it))
+                }
             }
         })
         // 开启定位图层
@@ -103,36 +109,32 @@ class SelectAddressByMapActivity : AppCompatActivity() {
             override fun onGetGeoCodeResult(p0: GeoCodeResult?) {}
 
             override fun onGetReverseGeoCodeResult(p0: ReverseGeoCodeResult?) {
-                val poiInfos = p0!!.poiList
-                if (poiInfos != null) {
-                    val poiAdapter = PoiAdapter(mContext, poiInfos)
-                    mLvResult.adapter = poiAdapter
-                    mLvResult.onItemClickListener = AdapterView.OnItemClickListener { _, _, position, _ ->
-                        val poiInfo = poiInfos[position]
-                        val intent = Intent()
-                        intent.putExtra("address", poiInfo.name)
-                        setResult(RESULT_OK, intent)
-                        finish()
-                    }
+                p0?.poiList?.let {
+                    mPoiInfoList.clear()
+                    mPoiInfoList.addAll(it) //只读
+                    mPoiAdapter.notifyDataSetChanged()
                 }
             }
         })
+        mPoiAdapter = PoiAdapter(mContext, mPoiInfoList) //地图下方POI列表适配器
+        mLvResult.adapter = mPoiAdapter
+        mLvResult.onItemClickListener = AdapterView.OnItemClickListener { _, _, position, _ ->
+            val poiInfo = mPoiInfoList[position]
+            val intent = Intent()
+            intent.putExtra("address", poiInfo.name)
+            setResult(RESULT_OK, intent)
+            finish()
+        }
 
         // 初始化搜索模块，注册搜索事件监听
         mSuggestionSearch = SuggestionSearch.newInstance()
         mSuggestionSearch.setOnGetSuggestionResultListener { suggestionResult ->
-            if (suggestionResult == null || suggestionResult.allSuggestions == null) {
-                return@setOnGetSuggestionResultListener
-            }
-            mSuggestionInfos.clear()
-            sugAdapter.clear()
-            val suggestionInfoList = suggestionResult.allSuggestions
-            if (suggestionInfoList != null) {
-                for (info in suggestionInfoList) {
-                    if (info.pt != null) {
-                        mSuggestionInfos.add(info)
-                        sugAdapter.add(info.district + info.key)
-                    }
+            suggestionResult?.allSuggestions?.let {
+                mSuggestionInfos.clear()
+                sugAdapter.clear()
+                it.forEach {
+                    mSuggestionInfos.add(it)
+                    sugAdapter.add(it.district + it.key)
                 }
             }
             sugAdapter.notifyDataSetChanged()
@@ -181,7 +183,7 @@ class SelectAddressByMapActivity : AppCompatActivity() {
 
         sugAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line)
         mLvSearch.adapter = sugAdapter
-        mLvSearch.onItemClickListener = AdapterView.OnItemClickListener { adapterView, view, i, l ->
+        mLvSearch.onItemClickListener = AdapterView.OnItemClickListener { _, _, i, _ ->
             val info = mSuggestionInfos[i]
             val intent = Intent()
             intent.putExtra("address", info.district + info.key)
@@ -219,11 +221,9 @@ class SelectAddressByMapActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         mLocClient.stop()
-        mBaiduMap.setMyLocationEnabled(false)
+        mBaiduMap.isMyLocationEnabled = false
         mMap.onDestroy()
-        if (geoCoder != null) {
-            geoCoder.destroy()
-        }
+        geoCoder.destroy()
         mSuggestionSearch.destroy()
     }
 
@@ -240,26 +240,27 @@ class SelectAddressByMapActivity : AppCompatActivity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_DOWN) {
+        return if (keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_DOWN) {
             if (!acStateIsMap) {
                 mLlMap.visibility = View.VISIBLE
                 mLlSearch.visibility = View.GONE
                 acStateIsMap = true
-                return false
+                false
             } else {
                 this.setResult(Activity.RESULT_CANCELED)
                 finish()
-                return true
+                true
             }
+        } else {
+            super.onKeyDown(keyCode, event)
         }
-        return super.onKeyDown(keyCode, event)
     }
 
     /**
      * 拖动检索提示
      */
     internal inner class PoiAdapter(private val context: Context, private val pois: List<PoiInfo>) : BaseAdapter() {
-        private var linearLayout: LinearLayout? = null
+        private lateinit var linearLayout: LinearLayout
 
         override fun getCount(): Int {
             return pois.size
