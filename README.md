@@ -1,7 +1,7 @@
 # BaiduMapDemo
 通过百度地图实现仿美团外卖的地图选点确定收货地址
 
-项目详解请阅读：[https://www.jianshu.com/p/29b60ca83be2](https://www.jianshu.com/p/29b60ca83be2)
+项目详解请阅读：[https://blog.csdn.net/u011133887/article/details/80372616](https://blog.csdn.net/u011133887/article/details/80372616)
 
 ### Demo使用方法：
 
