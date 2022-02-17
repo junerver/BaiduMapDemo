@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
-import android.support.v7.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatActivity
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.KeyEvent
@@ -227,11 +227,12 @@ class SelectAddressByMapActivity : AppCompatActivity() {
         mSuggestionSearch.destroy()
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         //此处处理城市选择
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_CODE_CITY && resultCode == Activity.RESULT_OK) {
-            mSelectCity = data.getStringExtra("city")
+            mSelectCity = data?.getStringExtra("city").toString()
             mTvSelectedCity.text = mSelectCity
             mSuggestionInfos.clear()
             sugAdapter.clear()
